@@ -1,19 +1,27 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-import Home from '../views/Home.vue';
+import PlayerView from '../views/PlayerView.vue';
+import LobbyView from '../views/LobbyView.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    name: 'Home',
-    component: Home,
+    name: 'Lobby',
+    component: LobbyView,
+    // beforeEnter: Guard that player is not in game
   },
   {
-    path: '/about',
-    name: 'About',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue'),
+    path: '/:initialRoomId',
+    name: 'LobbyWithId',
+    component: LobbyView,
+    props: true,
+    // beforeEnter: Guard that player is not in game
+  },
+  {
+    path: '/:roomId',
+    name: 'PlayerView',
+    component: PlayerView,
+    props: true,
+    // beforeEnter: Guard that player is in game
   },
 ];
 

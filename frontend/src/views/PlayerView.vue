@@ -1,0 +1,88 @@
+<template>
+  <div>
+    <PlayerCircle :players="players" containerSize="90vh" />
+  </div>
+  <button @click="leave">Leave</button>
+</template>
+
+<script lang="ts">
+import {
+  defineComponent,
+  onBeforeMount,
+  onUnmounted,
+  ref,
+} from 'vue';
+import { useRouter } from 'vue-router';
+import PlayerCircle from '@/components/PlayerCircle.vue';
+import Player from '@/model/Player';
+import GameService from '@/services/GameService';
+
+export default defineComponent({
+  name: 'PlayerView',
+  components: {
+    PlayerCircle,
+  },
+  props: {
+    roomId: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+  },
+  async setup(props) {
+    const players = ref([] as Player[]);
+    const router = useRouter();
+    const gameService = new GameService();
+
+    function addPlayer(playerName: string): void {
+      players.value.push({ name: playerName, color: '#808080' });
+    }
+
+    function removePlayer(playerName: string): void {
+      const index = players.value.findIndex((p) => p.name === playerName);
+      players.value.splice(index, 1);
+    }
+
+    async function join(): Promise<void> {
+      console.log(`joining game ${props.roomId}`);
+      const names = await gameService.joinGame(props.roomId, props.name);
+      for (let i = 0; i < names.length; i++) {
+        addPlayer(names[i]);
+      }
+
+      addPlayer(props.name);
+    }
+
+    async function leave(): Promise<void> {
+      await gameService.leaveGame();
+      router.push('/');
+    }
+
+    gameService.onPlayerJoined(addPlayer);
+    gameService.onPlayerLeft(removePlayer);
+
+    // Maybe this could help something?
+    // https://medium.com/javascript-in-plain-english/handling-asynchrony-in-vue-3-composition-api-part-1-managing-async-state-e993842ebf8f
+    // https://medium.com/javascript-in-plain-english/handling-asynchrony-with-vue-composition-api-and-vue-concurrency-part-2-canceling-throttling-4e0305c82367
+    onBeforeMount(async () => {
+      try {
+        await gameService.ensureConnected();
+        await join();
+      } catch (e) {
+        alert(e);
+        router.go(-1);
+      }
+    });
+
+    onUnmounted(() => gameService.stopListening());
+
+    return {
+      players,
+      leave,
+    };
+  },
+});
+</script>

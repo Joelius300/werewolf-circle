@@ -5,11 +5,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue';
+import { computed, defineComponent, PropType } from 'vue';
 import Player from '@/model/Player';
 
 export default defineComponent({
-  name: 'Player',
+  name: 'PlayerIcon',
   props: {
     player: {
       type: Object as PropType<Player>,
@@ -20,13 +20,15 @@ export default defineComponent({
       required: true,
     },
   },
-  computed: {
-    style(): object {
-      return {
-        backgroundColor: this.player.color,
-        '--d': `calc(${this.radius} * 2)`,
-      };
-    },
+  setup(props) {
+    const style = computed(() => ({
+      backgroundColor: props.player.color,
+      '--d': `calc(${props.radius} * 2)`,
+    }));
+
+    return {
+      style,
+    };
   },
 });
 </script>
