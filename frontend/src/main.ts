@@ -1,9 +1,9 @@
 import { createApp } from 'vue';
-import { createPinia } from 'pinia';
+import piniaInstance from '@/stores/piniaProvider';
 import App from './App.vue';
 import router from './router';
 
 createApp(App)
   .use(router)
-  .use(createPinia())
+  .use(piniaInstance)
   .mount('#app');

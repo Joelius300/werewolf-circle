@@ -4,8 +4,13 @@
       <label for="roomInput">Room-Id</label>
       <input id="roomInput" v-model="roomId" />
       <label for="nameInput">Username</label>
-      <input id="nameInput" v-model="username" />
-      <button @click="join">Join existing game</button>
+      <input
+        id="nameInput"
+        v-model="playerName"
+      >
+      <button @click="join">
+        Join existing game
+      </button>
       <p>or</p>
       <button @click="create">Create a new game</button>
     </div>
@@ -13,22 +18,19 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, toRefs } from 'vue';
 import { useRouter } from 'vue-router';
 import GameService from '@/services/GameService';
+import useMainStore from '@/stores/main';
 
 export default defineComponent({
   name: 'LobbyView',
-  props: {
-    initialRoomId: String,
-  },
-  setup(props) {
+  setup() {
+    const store = useMainStore();
     const router = useRouter();
-    const roomId = ref(props.initialRoomId ?? '');
-    const username = ref('');
 
-    async function joinCore(room: string, name: string) {
-      return router.push({ name: 'PlayerView', params: { roomId: room, name } });
+    async function joinCore() {
+      return router.push({ name: 'PlayerView', params: { roomId: store.roomId } });
     }
 
     async function create(): Promise<void> {
@@ -36,20 +38,21 @@ export default defineComponent({
       await gameService.ensureConnected();
       const createdRoomId = await gameService.createGame();
 
-      // TODO This is bad.. I should be using some state-management
-      // instead of passing state via route without url params
-      // https://dev.to/blacksonic/you-might-not-need-vuex-with-vue-3-52e4
-      await joinCore(createdRoomId, 'Admin');
+      store.roomId = createdRoomId;
+      store.playerName = 'Admin';
+      await joinCore();
     }
 
     async function join() {
-      return joinCore(roomId.value, username.value);
+      return joinCore();
     }
+
+    const { roomId, playerName } = toRefs(store);
 
     return {
       create,
       roomId,
-      username,
+      playerName,
       join,
     };
   },
