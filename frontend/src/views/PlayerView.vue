@@ -1,8 +1,13 @@
 <template>
   <div>
-    <PlayerCircle :players="players" containerSize="90vh" />
+    <PlayerCircle
+      :players="players"
+      container-size="90vh"
+    />
   </div>
-  <button @click="leave">Leave</button>
+  <button @click="leave">
+    Leave
+  </button>
 </template>
 
 <script lang="ts">

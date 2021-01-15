@@ -1,8 +1,16 @@
 <template>
-  <div class="container" :style="containerStyle">
-    <PlayerIcon class="player" v-for="(player, index) in players" :key="player.name"
-                     :player="player" :radius="playerRadius"
-                     :style="{ '--a': `${angle * index}rad` }" />
+  <div
+    class="container"
+    :style="containerStyle"
+  >
+    <PlayerIcon
+      v-for="(player, index) in players"
+      :key="player.name"
+      class="player"
+      :player="player"
+      :radius="playerRadius"
+      :style="{ '--a': `${angle * index}rad` }"
+    />
   </div>
 </template>
 

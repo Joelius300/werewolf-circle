@@ -1,8 +1,14 @@
 <template>
   <div class="container">
-    <div class="card" style="height: 30vh; width: 50vw;">
+    <div
+      class="card"
+      style="height: 30vh; width: 50vw;"
+    >
       <label for="roomInput">Room-Id</label>
-      <input id="roomInput" v-model="roomId" />
+      <input
+        id="roomInput"
+        v-model="roomId"
+      >
       <label for="nameInput">Username</label>
       <input
         id="nameInput"
@@ -12,7 +18,9 @@
         Join existing game
       </button>
       <p>or</p>
-      <button @click="create">Create a new game</button>
+      <button @click="create">
+        Create a new game
+      </button>
     </div>
   </div>
 </template>
