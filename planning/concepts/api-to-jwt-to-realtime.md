@@ -19,7 +19,7 @@ Instead of doing everything over an ongoing connection, only the game updates ar
   - Realtime would allow easy two-way communication
   - Realtime changes would be commited one-by-one
   - API changes can be done one-by-one or in bulk (easier to implement "save" feature)
-  - API is more standard to fetch the roles, put them in a drop down and send a PUT for updating the game
+  - API is more standard to fetch the roles, put them in a drop down and send a PATCH for updating the game
 
 ## Questions
 
@@ -72,3 +72,7 @@ Opening the website will automatically redirect the user to the active game if t
 5. The backend emits player left event for all other users in the game
 6. Frontend deletes JWT
 7. Frontend redirects to root-page
+
+## Endpoints
+
+...
