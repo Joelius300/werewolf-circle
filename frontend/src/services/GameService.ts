@@ -1,9 +1,12 @@
+import useGameStore from '@/stores/game';
 import hubConnectionProvider from './HubConnectionProvider';
-
 /* eslint-disable class-methods-use-this */
 
 // with minor downsides (and some upsides?), this could also be done with something like
 // https://github.com/bterlson/strict-event-emitter-types
+/**
+ * Handles the communication with the server and manages the game store.
+ */
 export default class GameService {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   private callbacks: { [eventName: string]: (...args: any[]) => void } = {};
@@ -47,15 +50,32 @@ export default class GameService {
     this.addCallback('PlayerLeft', callback);
   }
 
-  public createGame(): Promise<string> {
-    return hubConnectionProvider.connection.invoke('CreateGame');
+  public async createGame(): Promise<void> {
+    await this.ensureConnected();
+
+    const gameStore = useGameStore();
+    gameStore.roomId = await hubConnectionProvider.connection.invoke('CreateGame') as string;
   }
 
-  public joinGame(roomId: string, playerName: string): Promise<string[]> {
-    return hubConnectionProvider.connection.invoke('JoinGame', roomId, playerName);
+  public async joinGame(roomId: string, playerName: string): Promise<void> {
+    await this.ensureConnected();
+    const players = await hubConnectionProvider.connection.invoke('JoinGame', roomId, playerName) as string[];
+
+    const gameStore = useGameStore();
+    gameStore.roomId = roomId;
+    gameStore.playerName = playerName;
+    gameStore.isInGame = true;
+    gameStore.players = players.map((n) => ({ name: n, color: '#808080' }));
   }
 
-  public leaveGame(): Promise<void> {
-    return hubConnectionProvider.connection.invoke('LeaveGame');
+  public async leaveGame(): Promise<void> {
+    await this.ensureConnected();
+    await hubConnectionProvider.connection.invoke('LeaveGame');
+
+    const gameStore = useGameStore();
+    gameStore.roomId = '';
+    gameStore.playerName = '';
+    gameStore.isInGame = false;
+    gameStore.players = [];
   }
 }

@@ -26,36 +26,34 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import GameService from '@/services/GameService';
-import useMainStore from '@/stores/main';
+import useGameStore from '@/stores/game';
 
 export default defineComponent({
   name: 'LobbyView',
   setup() {
-    const store = useMainStore();
+    const store = useGameStore();
     const router = useRouter();
+    const roomId = ref(store.roomId ?? '');
+    const playerName = ref('');
+    const gameService = new GameService();
 
-    async function joinCore() {
-      return router.push({ name: 'PlayerView', params: { roomId: store.roomId } });
+    async function join() {
+      await gameService.joinGame(roomId.value, playerName.value);
+
+      return router.push(`/${roomId.value}`);
     }
 
     async function create(): Promise<void> {
-      const gameService = new GameService();
-      await gameService.ensureConnected();
-      const createdRoomId = await gameService.createGame();
+      await gameService.createGame();
 
-      store.roomId = createdRoomId;
-      store.playerName = 'Admin';
-      await joinCore();
+      roomId.value = store.roomId;
+      playerName.value = 'Admin';
+
+      await join();
     }
-
-    async function join() {
-      return joinCore();
-    }
-
-    const { roomId, playerName } = toRefs(store);
 
     return {
       create,

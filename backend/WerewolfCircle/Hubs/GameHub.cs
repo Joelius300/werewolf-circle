@@ -50,7 +50,7 @@ namespace WerewolfCircle.Hubs
                                         .FirstOrDefaultAsync(g => g.RoomId == roomId);
 
             if (game is null)
-                throw new HubException("Game does not exist.");
+                throw new HubException($"Game '{roomId}' does not exist.");
 
             if (!PlayerNameValid(playerName))
                 throw new HubException("The supplied player name is invalid.");
@@ -71,7 +71,7 @@ namespace WerewolfCircle.Hubs
 
             await Groups.AddToGroupAsync(Context.ConnectionId, game.RoomId);
 
-            return game.Players.SkipLast(1).Select(p => p.Name);
+            return game.Players.Select(p => p.Name);
 
             // Add user to group for that game if it exists
             // Add player to that game
