@@ -26,19 +26,16 @@ namespace WerewolfCircle.Hubs
 
             Game game = new Game
             {
-                RoomId = KeyGenerator.GetUniqueKey(RoomIdLength)
+                RoomId = KeyGenerator.GetUniqueKey(RoomIdLength),
+                AdminConnectionId = Context.ConnectionId
             };
 
             await _dbContext.Games.AddAsync(game);
             await _dbContext.SaveChangesAsync();
 
-            // await Groups.AddToGroupAsync(Context.ConnectionId, game.RoomId); This is going to be required for admin stuff
-
-            Console.WriteLine(game.RoomId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, game.RoomId);
 
             return game.RoomId;
-
-            // If user is not in game create a new game and return the game-id
         }
 
         public async Task<IEnumerable<string>> JoinGame(string roomId, string playerName)
@@ -73,13 +70,10 @@ namespace WerewolfCircle.Hubs
 
             return game.Players.Select(p => p.Name);
 
-            // Add user to group for that game if it exists
-            // Add player to that game
-            // Duplicate player names are not allowed
-
             // TODO Maybe not required (yet) but we could return a secret id here which they can
             // use later on to rejoin the same game if they closed the tab/browser without explicitly
             // leaving the game.
+            // Probably disregard until JWT
         }
 
         public async Task LeaveGame()
@@ -97,9 +91,6 @@ namespace WerewolfCircle.Hubs
 
             _dbContext.Remove(player);
             await _dbContext.SaveChangesAsync();
-
-            // If player is in a game, leave that game and its group
-            // Calls IGameHubClient.PlayerLeft for everyone else
         }
 
         // If the player is in the DB, they have to be in a game in which case they can't create or join a new one.
@@ -107,7 +98,8 @@ namespace WerewolfCircle.Hubs
         private async Task EnsurePlayerNotInGame()
         {
             Player player = await _dbContext.Players.FirstOrDefaultAsync(p => p.ConnectionId == Context.ConnectionId);
-            
+            // TODO Also check if the player is the admin of a game
+
             if (player is not null)
                 throw new HubException("Player is in a game.");
         }

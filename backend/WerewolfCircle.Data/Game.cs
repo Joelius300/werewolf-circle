@@ -13,6 +13,9 @@ namespace WerewolfCircle.Data
         [Required]
         public string RoomId { get; set; } = string.Empty;
 
+        [Required]
+        public string AdminConnectionId { get; set; } = string.Empty;
+
         public ICollection<Player> Players { get; set; } = null!;
     }
 }
