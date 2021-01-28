@@ -46,13 +46,10 @@ export default defineComponent({
       return router.push(`/${roomId.value}`);
     }
 
-    async function create(): Promise<void> {
-      await gameService.createGame();
+    async function create() {
+      const game = await gameService.createGame();
 
-      roomId.value = store.roomId;
-      playerName.value = 'Admin';
-
-      await join();
+      return router.push(`/${game.roomId}/admin`);
     }
 
     return {

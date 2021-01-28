@@ -5,9 +5,6 @@
       container-size="90vh"
     />
   </div>
-  <button @click="leave">
-    Leave
-  </button>
 </template>
 
 <script lang="ts">
@@ -15,25 +12,18 @@ import {
   defineComponent,
   onUnmounted,
 } from 'vue';
-import { useRouter } from 'vue-router';
 import PlayerCircle from '@/components/PlayerCircle.vue';
 import GameService from '@/services/GameService';
 import useGameStore from '@/stores/game';
 
 export default defineComponent({
-  name: 'PlayerView',
+  name: 'AdminView',
   components: {
     PlayerCircle,
   },
   setup() {
-    const router = useRouter();
     const store = useGameStore();
     const gameService = new GameService();
-
-    async function leave(): Promise<void> {
-      await gameService.leaveGame();
-      router.push('/');
-    }
 
     onUnmounted(() => gameService.stopListening());
 
@@ -45,7 +35,6 @@ export default defineComponent({
 
     return {
       players: game.players,
-      leave,
     };
   },
 });

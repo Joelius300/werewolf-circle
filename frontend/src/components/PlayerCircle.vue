@@ -7,7 +7,8 @@
       v-for="(player, index) in players"
       :key="player.name"
       class="player"
-      :player="player"
+      :player-name="player.name"
+      :bg-color="player.color"
       :radius="playerRadius"
       :style="{ '--a': `${angle * index}rad` }"
     />

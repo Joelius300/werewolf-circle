@@ -1,4 +1,7 @@
+import Player from '@/model/Player';
+import { Ref, ref } from 'vue';
 import useGameStore from '@/stores/game';
+import Game from './Game';
 import hubConnectionProvider from './HubConnectionProvider';
 /* eslint-disable class-methods-use-this */
 
@@ -9,7 +12,7 @@ import hubConnectionProvider from './HubConnectionProvider';
  */
 export default class GameService {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  private callbacks: { [eventName: string]: (...args: any[]) => void } = {};
+  private callbacks: { [eventName: string]: ((...args: any[]) => void)[] } = {};
 
   // reexposed for convenience, HubConnectionProvider should only be used to stop the connection
   public ensureConnected(): Promise<void> {
@@ -22,22 +25,26 @@ export default class GameService {
 
     if (func == null) throw new Error('The callback cannot be null or undefined.');
 
-    if (this.callbacks[name] != null) throw new Error(`Cannot register multiple events for '${name}' within this instance.`);
+    if (this.callbacks[name] == null) this.callbacks[name] = [];
 
-    this.callbacks[name] = func;
+    this.callbacks[name].push(func);
     hubConnectionProvider.connection.on(name, func);
   }
 
   /**
    * Removes all listeners/callbacks without interrupting the connection.
-   * Doesn't need to be called if you don't add any listeners with the 'onX'
-   * methods.
+   * This disconnects all games created by this instance and removes all handlers
+   * for the onX methods.
    */
   public stopListening(): void {
     const eventNames = Object.keys(this.callbacks);
     for (let i = 0; i < eventNames.length; i++) {
       const eventName = eventNames[i];
-      hubConnectionProvider.connection.off(eventName, this.callbacks[eventName]);
+      const events = this.callbacks[eventName];
+      for (let j = 0; j < events.length; j++) {
+        hubConnectionProvider.connection.off(eventName, events[j]);
+        delete events[j];
+      }
       delete this.callbacks[eventName];
     }
   }
@@ -50,32 +57,54 @@ export default class GameService {
     this.addCallback('PlayerLeft', callback);
   }
 
-  public async createGame(): Promise<void> {
+  public async createGame(): Promise<Game> {
     await this.ensureConnected();
 
-    const gameStore = useGameStore();
-    gameStore.roomId = await hubConnectionProvider.connection.invoke('CreateGame') as string;
+    const store = useGameStore();
+    const roomId = await hubConnectionProvider.connection.invoke('CreateGame') as string;
+
+    const players = ref([] as Player[]);
+    const game = new Game(roomId, players);
+    this.hookupGameEvents(players);
+
+    store.game = game;
+    store.roomId = roomId;
+    store.playerName = null;
+
+    return game;
   }
 
-  public async joinGame(roomId: string, playerName: string): Promise<void> {
+  public async joinGame(roomId: string, playerName: string): Promise<Game> {
     await this.ensureConnected();
-    const players = await hubConnectionProvider.connection.invoke('JoinGame', roomId, playerName) as string[];
 
-    const gameStore = useGameStore();
-    gameStore.roomId = roomId;
-    gameStore.playerName = playerName;
-    gameStore.isInGame = true;
-    gameStore.players = players.map((n) => ({ name: n, color: '#808080' }));
+    const store = useGameStore();
+    const playerNames = await hubConnectionProvider.connection.invoke('JoinGame', roomId, playerName) as string[];
+
+    const players = ref(playerNames.map((n) => ({ name: n, color: n === playerName ? '#fd912a' : '#808080' })));
+    const game = new Game(roomId, players);
+    this.hookupGameEvents(players);
+
+    store.game = game;
+    store.roomId = roomId;
+    store.playerName = playerName;
+
+    return game;
+  }
+
+  private hookupGameEvents(players: Ref<Player[]>) {
+    this.onPlayerJoined((name) => players.value.push({ name, color: '#808080' }));
+    this.onPlayerLeft((name) => {
+      const index = players.value.findIndex((p) => p.name === name);
+      players.value.splice(index, 1);
+    });
   }
 
   public async leaveGame(): Promise<void> {
     await this.ensureConnected();
     await hubConnectionProvider.connection.invoke('LeaveGame');
-
-    const gameStore = useGameStore();
-    gameStore.roomId = '';
-    gameStore.playerName = '';
-    gameStore.isInGame = false;
-    gameStore.players = [];
+    const store = useGameStore();
+    store.game = null;
+    store.roomId = '';
+    store.playerName = null;
   }
 }

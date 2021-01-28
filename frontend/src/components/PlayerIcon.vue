@@ -1,28 +1,31 @@
 <template>
   <div :style="style">
-    <span>{{ player.name }}</span>
+    <span>{{ playerName }}</span>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType } from 'vue';
-import Player from '@/model/Player';
+import { computed, defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'PlayerIcon',
   props: {
-    player: {
-      type: Object as PropType<Player>,
+    playerName: {
+      type: String,
       required: true,
     },
     radius: {
       type: String,
       required: true,
     },
+    bgColor: {
+      type: String,
+      default: '#808080',
+    },
   },
   setup(props) {
     const style = computed(() => ({
-      backgroundColor: props.player.color,
+      backgroundColor: props.bgColor,
       '--d': `calc(${props.radius} * 2)`,
     }));
 
