@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import useGameStore from '@/stores/game';
 import piniaInstance from '@/stores/piniaProvider';
-import isValidPlayerName from '@/services/validators/PlayerNameValidator';
+import isValidPlayerName from '@/services/validators/playerNameValidator';
 import PlayerView from '../views/PlayerView.vue';
 import LobbyView from '../views/LobbyView.vue';
 import AdminView from '../views/AdminView.vue';
@@ -19,7 +19,7 @@ const routes: Array<RouteRecordRaw> = [
     beforeEnter: (to, _from, next) => {
       const store = useGameStore(piniaInstance);
       if (!isValidPlayerName(store.playerName)) {
-        store.roomId = to.params.roomId as string;
+        store.initialRoomId = to.params.roomId as string;
         next('/');
       } else {
         next();
@@ -32,10 +32,10 @@ const routes: Array<RouteRecordRaw> = [
     component: AdminView,
     beforeEnter: (to, _from, next) => {
       const store = useGameStore(piniaInstance);
-      if (store.playerName === null && store.game != null) {
+      if (store.playerName == null && store.game != null) {
         next();
       } else {
-        store.roomId = to.params.roomId as string;
+        store.initialRoomId = to.params.roomId as string;
         next('/');
       }
     },

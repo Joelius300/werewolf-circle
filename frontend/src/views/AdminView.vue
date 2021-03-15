@@ -8,12 +8,8 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  onUnmounted,
-} from 'vue';
+import { defineComponent } from 'vue';
 import PlayerCircle from '@/components/PlayerCircle.vue';
-import GameService from '@/services/GameService';
 import useGameStore from '@/stores/game';
 
 export default defineComponent({
@@ -23,9 +19,6 @@ export default defineComponent({
   },
   setup() {
     const store = useGameStore();
-    const gameService = new GameService();
-
-    onUnmounted(() => gameService.stopListening());
 
     if (store.game == null) {
       throw new Error('No Game in store.');

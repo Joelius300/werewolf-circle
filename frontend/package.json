@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^5.0.2",
+    "axios": "^0.21.1",
     "core-js": "^3.8.3",
+    "jwt-decode": "^3.1.2",
     "pinia": "^2.0.0-alpha.7",
     "vue": "^3.0.5",
     "vue-router": "^4.0.3"
