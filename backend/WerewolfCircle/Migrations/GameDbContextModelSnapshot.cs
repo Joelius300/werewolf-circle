@@ -21,10 +21,6 @@ namespace WerewolfCircle.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("AdminConnectionId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("RoomId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -42,9 +38,6 @@ namespace WerewolfCircle.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("ConnectionId")
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("GameId")
                         .HasColumnType("INTEGER");

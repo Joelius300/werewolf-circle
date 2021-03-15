@@ -10,8 +10,6 @@ namespace WerewolfCircle.Data
         [Required]
         public string Name { get; set; } = string.Empty;
 
-        public string? ConnectionId { get; set; }
-
         [Required]
         public Game Game { get; set; } = null!;
     }
