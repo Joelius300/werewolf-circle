@@ -11,13 +11,9 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  onUnmounted,
-} from 'vue';
+import { defineComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import PlayerCircle from '@/components/PlayerCircle.vue';
-import GameService from '@/services/GameService';
 import useGameStore from '@/stores/game';
 
 export default defineComponent({
@@ -28,14 +24,11 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const store = useGameStore();
-    const gameService = new GameService();
 
     async function leave(): Promise<void> {
-      await gameService.leaveGame();
+      await store.leaveGame();
       router.push('/');
     }
-
-    onUnmounted(() => gameService.stopListening());
 
     if (store.game == null) {
       throw new Error('No Game in store.');

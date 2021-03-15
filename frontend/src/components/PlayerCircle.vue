@@ -50,6 +50,7 @@ export default defineComponent({
   setup(props) {
     const angle = computed(() => (Math.PI * 2) / props.players.length);
     const sin = computed(() => Math.sin(angle.value / 2));
+    // eslint-disable-next-line max-len
     const playerRadius = computed(() => `calc(max(min((${sin.value} * var(--r) * 2 - ${props.minPlayerDistance}) / 2, ${props.maxPlayerRadius}), ${props.minPlayerRadius}))`);
     const containerStyle = computed(() => ({
       // So far so good but now there's too much room when the playerRadius isn't maximized

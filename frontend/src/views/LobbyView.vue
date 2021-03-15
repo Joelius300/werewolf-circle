@@ -28,7 +28,6 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import GameService from '@/services/GameService';
 import useGameStore from '@/stores/game';
 
 export default defineComponent({
@@ -36,18 +35,17 @@ export default defineComponent({
   setup() {
     const store = useGameStore();
     const router = useRouter();
-    const roomId = ref(store.roomId ?? '');
+    const roomId = ref(store.initialRoomId ?? '');
     const playerName = ref('');
-    const gameService = new GameService();
 
     async function join() {
-      await gameService.joinGame(roomId.value, playerName.value);
+      await store.joinGame(roomId.value, playerName.value);
 
       return router.push(`/${roomId.value}`);
     }
 
     async function create() {
-      const game = await gameService.createGame();
+      const game = await store.createGame();
 
       return router.push(`/${game.roomId}/admin`);
     }

@@ -1,110 +1,101 @@
+import
+{
+  DeepReadonly,
+  reactive,
+  readonly,
+  watch,
+} from 'vue';
+import axios from 'axios';
+import { HubConnection } from '@microsoft/signalr';
 import Player from '@/model/Player';
-import { Ref, ref } from 'vue';
-import useGameStore from '@/stores/game';
-import Game from './Game';
-import hubConnectionProvider from './HubConnectionProvider';
-/* eslint-disable class-methods-use-this */
+import Game from '@/model/Game';
+import { token, setToken } from '@/stores/tokenStore';
+import { ensureHubConnected } from './hubService';
+import GHC from './gameHubConnection';
 
-// with minor downsides (and some upsides?), this could also be done with something like
-// https://github.com/bterlson/strict-event-emitter-types
-/**
- * Handles the communication with the server and manages the game store.
- */
-export default class GameService {
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  private callbacks: { [eventName: string]: ((...args: any[]) => void)[] } = {};
+/*
+These functions are closely related to the game store and extracted to avoid bloat in the store definition.
+They feature some weird typing to mimic the necessary properties of 'this' in the game store.
+*/
+declare type MinimalGameStore = { game: DeepReadonly<Game> | null; readonly roomId: string | undefined };
+declare type MinimalGameStoreWithInternalState = MinimalGameStore & { $state: { game: DeepReadonly<Game> | null } };
 
-  // reexposed for convenience, HubConnectionProvider should only be used to stop the connection
-  public ensureConnected(): Promise<void> {
-    return hubConnectionProvider.ensureConnected();
+function subscribeToGameEvents(hubConnection: HubConnection, game: Game) {
+  const unsubPlayerJoined = GHC.onPlayerJoined(hubConnection, (n) => game.players.push({ name: n, color: '#808080' }));
+  const unsubPlayerLeft = GHC.onPlayerLeft(hubConnection, (name) => {
+    const index = game.players.findIndex((p) => p.name === name);
+    game.players.splice(index, 1);
+  });
+
+  return () => {
+    unsubPlayerJoined();
+    unsubPlayerLeft();
+    console.log('unsubbing from hub events');
+  }
+}
+
+function getGame(roomId: string, players?: Player[]): Game {
+  return reactive({ roomId, players: players || [] });
+}
+
+async function connectGame(store: MinimalGameStoreWithInternalState, gameMut: Game) {
+  if (!store.game || !gameMut) {
+    throw new Error('The supplied game cannot be null and has to be stored in the store as well (just readonly).');
   }
 
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  private addCallback(name: string, func: (...args: any[]) => void) {
-    if (name == null) throw new Error('The event name cannot be null or undefined.');
+  const connection = await ensureHubConnected();
+  const unsubFromEvents = subscribeToGameEvents(connection, gameMut);
 
-    if (func == null) throw new Error('The callback cannot be null or undefined.');
-
-    if (this.callbacks[name] == null) this.callbacks[name] = [];
-
-    this.callbacks[name].push(func);
-    hubConnectionProvider.connection.on(name, func);
-  }
-
-  /**
-   * Removes all listeners/callbacks without interrupting the connection.
-   * This disconnects all games created by this instance and removes all handlers
-   * for the onX methods.
-   */
-  public stopListening(): void {
-    const eventNames = Object.keys(this.callbacks);
-    for (let i = 0; i < eventNames.length; i++) {
-      const eventName = eventNames[i];
-      const events = this.callbacks[eventName];
-      for (let j = 0; j < events.length; j++) {
-        hubConnectionProvider.connection.off(eventName, events[j]);
-        delete events[j];
-      }
-      delete this.callbacks[eventName];
+  // I'd love to avoid directly accessing the "internal" state here but
+  // 0. () => store.game and using toRefs both don't work
+  // 1. it watches exactly what I want it to watch unlike $subscribe for example
+  const watchStopHandle = watch(() => store.$state.game, (newVal) => {
+    if (newVal == null) {
+      unsubFromEvents();
+      watchStopHandle();
     }
-  }
+  });
+}
 
-  public onPlayerJoined(callback: (name: string) => void): void {
-    this.addCallback('PlayerJoined', callback);
-  }
+/*
+ TODO Axios base-url with process.env.BASE_URL and automatic header if store.token is set
+ + potentially vue integration althought we don't really need that
+ https://www.digitalocean.com/community/tutorials/vuejs-rest-api-axios
+*/
 
-  public onPlayerLeft(callback: (name: string) => void): void {
-    this.addCallback('PlayerLeft', callback);
-  }
+export async function createGame(store: MinimalGameStoreWithInternalState): Promise<Game> {
+  const { token: jwt } = (await axios.post<{ token: string }>('http://localhost:5000/api/game/create')).data;
+  setToken(jwt);
 
-  public async createGame(): Promise<Game> {
-    await this.ensureConnected();
+  /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+  const game = getGame(store.roomId!);
+  store.game = readonly(game);
 
-    const store = useGameStore();
-    const roomId = await hubConnectionProvider.connection.invoke('CreateGame') as string;
+  await connectGame(store, game);
 
-    const players = ref([] as Player[]);
-    const game = new Game(roomId, players);
-    this.hookupGameEvents(players);
+  return game;
+}
 
-    store.game = game;
-    store.roomId = roomId;
-    store.playerName = null;
+export async function joinGame(store: MinimalGameStoreWithInternalState, roomId: string, playerName: string): Promise<Game> {
+  const body = { PlayerName: playerName, RoomId: roomId };
+  const response = await axios.post<{ token: string; players: string[] }>('http://localhost:5000/api/game/join', body);
+  const { token: jwt, players: playerNames } = response.data;
+  setToken(jwt);
 
-    return game;
-  }
+  const players = playerNames.map<Player>((n: string) => ({ name: n, color: n === playerName ? '#fd912a' : '#808080' }));
+  /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+  const game = getGame(store.roomId!, players);
+  store.game = readonly(game);
 
-  public async joinGame(roomId: string, playerName: string): Promise<Game> {
-    await this.ensureConnected();
+  await connectGame(store, game);
 
-    const store = useGameStore();
-    const playerNames = await hubConnectionProvider.connection.invoke('JoinGame', roomId, playerName) as string[];
+  return game;
+}
 
-    const players = ref(playerNames.map((n) => ({ name: n, color: n === playerName ? '#fd912a' : '#808080' })));
-    const game = new Game(roomId, players);
-    this.hookupGameEvents(players);
+export async function leaveGame(store: MinimalGameStore): Promise<void> {
+  await axios.post('http://localhost:5000/api/game/leave', null, { headers: { Authorization: `Bearer ${token.value}` } });
 
-    store.game = game;
-    store.roomId = roomId;
-    store.playerName = playerName;
-
-    return game;
-  }
-
-  private hookupGameEvents(players: Ref<Player[]>) {
-    this.onPlayerJoined((name) => players.value.push({ name, color: '#808080' }));
-    this.onPlayerLeft((name) => {
-      const index = players.value.findIndex((p) => p.name === name);
-      players.value.splice(index, 1);
-    });
-  }
-
-  public async leaveGame(): Promise<void> {
-    await this.ensureConnected();
-    await hubConnectionProvider.connection.invoke('LeaveGame');
-    const store = useGameStore();
-    store.game = null;
-    store.roomId = '';
-    store.playerName = null;
-  }
+  console.log('setting game to null, this should trigger the unsub function which removes the watchers');
+  store.game = null;
+  setToken(null);
 }
