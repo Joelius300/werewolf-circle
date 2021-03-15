@@ -75,4 +75,24 @@ Opening the website will automatically redirect the user to the active game if t
 
 ## Endpoints
 
-...
+### POST /api/game/create
+
+Creates the game if all inputs are valid and returns a new admin-jwt.
+
+
+
+### POST /api/game/join
+
+Joins the game if all inputs are valid and returns a new player-jwt.
+
+
+
+### GET /api/game/{roomId}
+
+Gets the current state of the game, used for fetching the initial state when joining or rejoining a game. It returns different objects for every player and admin (e.g. a "you" object and the roles of all the players).
+
+
+
+### POST /api/game/leave
+
+If the user is a player, leave the game and notify all players. If the user is the admin, destroy the game and notify all players.

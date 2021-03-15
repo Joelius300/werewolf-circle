@@ -20,6 +20,11 @@ namespace WerewolfCircle.Hubs
         Task PlayerLeft(string playerName);
 
         /// <summary>
+        /// Reset the UI and remove any associations with the current game.
+        /// </summary>
+        Task GameDestroyed();
+
+        /// <summary>
         /// Mark the given player as disconnected. They might rejoin
         /// (in which case <see cref="PlayerJoined(string)"/> will be called).
         /// </summary>

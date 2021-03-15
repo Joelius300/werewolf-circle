@@ -13,6 +13,11 @@ namespace WerewolfCircle
     {
         public static void Main(string[] args)
         {
+            // We want standard claim names everywhere :)
+            // Keep https://github.com/jwt-dotnet/jwt in mind but the integration isn't ready yet.
+            System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+            System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
             CreateHostBuilder(args).Build()
                                    .Run();
         }
