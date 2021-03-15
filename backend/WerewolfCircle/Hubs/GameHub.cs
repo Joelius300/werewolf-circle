@@ -1,18 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using WerewolfCircle.Auth;
 using WerewolfCircle.Data;
 using WerewolfCircle.Utils;
 
 namespace WerewolfCircle.Hubs
 {
+    [Authorize]
     public class GameHub : Hub<IGameHubClient>
     {
-        private const int RoomIdLength = 6;
+        //private static readonly ConcurrentDictionary<string, IList<string>> s_connectionIds = new();
         private readonly GameDbContext _dbContext;
 
         public GameHub(GameDbContext dbContext)
@@ -20,91 +26,77 @@ namespace WerewolfCircle.Hubs
             _dbContext = dbContext;
         }
 
-        public async Task<string> CreateGame()
+        public override async Task OnConnectedAsync()
         {
-            await EnsurePlayerNotInGame();
-
-            Game game = new Game
+            if (Context.User?.Identity is not ClaimsIdentity identity || !identity.IsAuthenticated)
             {
-                RoomId = KeyGenerator.GetUniqueKey(RoomIdLength),
-                AdminConnectionId = Context.ConnectionId
-            };
+                Debug.Fail("User was not authenticated when connecting to hub.");
+                return;
+            }
 
-            await _dbContext.Games.AddAsync(game);
-            await _dbContext.SaveChangesAsync();
+            string roomId = identity.FindFirst(JwtConfig.RoomIdClaimType)!.Value;
+            bool isAdmin = identity.FindFirst(JwtConfig.RoleClaimType)?.Value == Policies.AdminRole;
+            string? playerName = identity.FindFirst(JwtRegisteredClaimNames.GivenName)?.Value;
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, game.RoomId);
-
-            return game.RoomId;
-        }
-
-        public async Task<IEnumerable<string>> JoinGame(string roomId, string playerName)
-        {
-            await EnsurePlayerNotInGame();
-
-            Game game = await _dbContext.Games
-                                        .Include(g => g.Players)
-                                        .FirstOrDefaultAsync(g => g.RoomId == roomId);
-
-            if (game is null)
-                throw new HubException($"Game '{roomId}' does not exist.");
-
-            if (!PlayerNameValid(playerName))
-                throw new HubException("The supplied player name is invalid.");
-
-            if (game.Players.Any(p => p.Name.Equals(playerName, StringComparison.OrdinalIgnoreCase))) // DOES THIS WORK?
-                throw new HubException("A player with that name is already in this game.");
-
-            Player player = new Player
+            if (!isAdmin)
             {
-                ConnectionId = Context.ConnectionId,
-                Name = playerName
-            };
+                Game? game = await _dbContext.GetGameByRoomId(roomId, tracking: false);
+                if (game is null)
+                    throw new HubException($"Game '{roomId}' does not exist.");
 
-            game.Players.Add(player);
-            await _dbContext.SaveChangesAsync();
+                if (!game.Players.Any(p => p.Name == playerName))
+                {
+                    throw new HubException($"There's no player with the name '{playerName}' in game '{roomId}'.");
+                }
+            }
 
-            await Clients.Group(game.RoomId).PlayerJoined(playerName);
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, game.RoomId);
-
-            return game.Players.Select(p => p.Name);
-
-            // TODO Maybe not required (yet) but we could return a secret id here which they can
-            // use later on to rejoin the same game if they closed the tab/browser without explicitly
-            // leaving the game.
-            // Probably disregard until JWT
+            //IList<string> connectionIds = s_connectionIds.GetOrAdd(Context.UserIdentifier!, new List<string>());
+            //lock (connectionIds)
+            //{
+            //    connectionIds.Add(Context.ConnectionId);
+            //}
         }
 
-        public async Task LeaveGame()
-        {
-            Player player = await _dbContext.Players
-                                            .Include(p => p.Game)
-                                            .FirstOrDefaultAsync(p => p.ConnectionId == Context.ConnectionId);
+        //public override Task OnDisconnectedAsync(Exception? exception)
+        //{
+        //    _logger.LogDebug($"Client disconnected from hub: UserId: {Context.UserIdentifier} ConnId: {Context.ConnectionId}");
+        //    IList<string> connectionIds = s_connectionIds[Context.UserIdentifier!];
+        //    lock (connectionIds)
+        //    {
+        //        connectionIds.Remove(Context.ConnectionId);
+        //    }
 
-            if (player is null)
-                throw new HubException("Player is not in a game.");
+        //    if (!connectionIds.Any())
+        //    {
+        //        // This isn't perfectly race-condition-safe but a person would have to leave from one device
+        //        // and join from another one in a very very small timeframe and when we realize joining from
+        //        // multiple devices isn't even supported or implemented yet, I'd say this is perfectly acceptable :)
+        //        s_connectionIds.TryRemove(Context.UserIdentifier!, out _);
+        //    }
 
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, player.Game.RoomId);
+        //    return Task.CompletedTask;
+        //}
 
-            await Clients.Group(player.Game.RoomId).PlayerLeft(player.Name);
-
-            _dbContext.Remove(player);
-            await _dbContext.SaveChangesAsync();
-        }
-
-        // If the player is in the DB, they have to be in a game in which case they can't create or join a new one.
-        // This doesn't prevent spamming and is probably abusable otherwise but we can worry about that later.
-        private async Task EnsurePlayerNotInGame()
-        {
-            Player player = await _dbContext.Players.FirstOrDefaultAsync(p => p.ConnectionId == Context.ConnectionId);
-            // TODO Also check if the player is the admin of a game
-
-            if (player is not null)
-                throw new HubException("Player is in a game.");
-        }
-
-        private static bool PlayerNameValid(string playerName) => !string.IsNullOrWhiteSpace(playerName) &&
-                                                                  Regex.IsMatch(playerName, @"^[\w\-]{2,25}$");
+        /* TODO This doesn't work (and it probably shouldn't either) because
+         * methods on the hub are only designed for being called by the clients.
+         * You don't have access to the hub methods with IHubContext.
+         * So instead we need something like static PopConnectionIds(string playerName, string roomId)
+         * which removes and returns all connection ids so you can use them to remove the user
+         * from the game-group. For invoking something on all clients of a user, you don't use
+         * PopConnectionIds but IHubContext.Clients.User() (something for the summary).
+         */
+        //internal async Task RemovePlayerFromGame(string playerName, string roomId)
+        //{
+        //    string userIdentifier = NameUserIdProvider.GetUserId(roomId, playerName);
+        //    if (s_connectionIds.TryRemove(userIdentifier, out IList<string>? connectionIds))
+        //    {
+        //        foreach (string connectionId in connectionIds)
+        //        {
+        //            await Groups.RemoveFromGroupAsync(connectionId, roomId);
+        //        }
+        //    }
+        //}
     }
 }
