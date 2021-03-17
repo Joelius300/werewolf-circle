@@ -5,11 +5,11 @@ import
   readonly,
   watch,
 } from 'vue';
-import axios from 'axios';
+import axios from '@/services/axios';
 import { HubConnection } from '@microsoft/signalr';
 import Player from '@/model/Player';
 import Game from '@/model/Game';
-import { token, setToken } from '@/stores/tokenStore';
+import { setToken } from '@/stores/tokenStore';
 import { ensureHubConnected } from './hubService';
 import GHC from './gameHubConnection';
 
@@ -57,14 +57,8 @@ async function connectGame(store: MinimalGameStoreWithInternalState, gameMut: Ga
   });
 }
 
-/*
- TODO Axios base-url with process.env.BASE_URL and automatic header if store.token is set
- + potentially vue integration althought we don't really need that
- https://www.digitalocean.com/community/tutorials/vuejs-rest-api-axios
-*/
-
 export async function createGame(store: MinimalGameStoreWithInternalState): Promise<Game> {
-  const { token: jwt } = (await axios.post<{ token: string }>('http://localhost:5000/api/game/create')).data;
+  const { token: jwt } = (await axios.post<{ token: string }>('/game/create')).data;
   setToken(jwt);
 
   /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
@@ -78,7 +72,7 @@ export async function createGame(store: MinimalGameStoreWithInternalState): Prom
 
 export async function joinGame(store: MinimalGameStoreWithInternalState, roomId: string, playerName: string): Promise<Game> {
   const body = { PlayerName: playerName, RoomId: roomId };
-  const response = await axios.post<{ token: string; players: string[] }>('http://localhost:5000/api/game/join', body);
+  const response = await axios.post<{ token: string; players: string[] }>('/game/join', body);
   const { token: jwt, players: playerNames } = response.data;
   setToken(jwt);
 
@@ -93,7 +87,7 @@ export async function joinGame(store: MinimalGameStoreWithInternalState, roomId:
 }
 
 export async function leaveGame(store: MinimalGameStore): Promise<void> {
-  await axios.post('http://localhost:5000/api/game/leave', null, { headers: { Authorization: `Bearer ${token.value}` } });
+  await axios.post('/game/leave');
 
   console.log('setting game to null, this should trigger the unsub function which removes the watchers');
   store.game = null;
