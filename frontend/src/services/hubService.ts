@@ -12,8 +12,11 @@ function getHubConnection() {
     return token.value;
   }
 
+  const url = process.env.VUE_APP_GAME_HUB_URL;
+  if (!url) throw new Error('No VUE_APP_GAME_HUB_URL provided!');
+
   hubConnectionSingleton = new HubConnectionBuilder()
-    .withUrl('http://localhost:5000/gameHub', { accessTokenFactory }) // process.env.BASE_URL TODO
+    .withUrl(url, { accessTokenFactory })
     .build();
 
   return hubConnectionSingleton;
