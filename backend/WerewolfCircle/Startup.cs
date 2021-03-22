@@ -45,7 +45,7 @@ namespace WerewolfCircle
                                                          .WithOrigins("http://localhost:8080"));
             });
 
-            services.AddDbContext<GameDbContext>(builder => builder.UseSqlite(Configuration.GetConnectionString("Default"),
+            services.AddDbContext<GameDbContext>(builder => builder.UseNpgsql(Configuration.GetConnectionString("Default"),
                                                                               b => b.MigrationsAssembly(nameof(WerewolfCircle))));
 
 
