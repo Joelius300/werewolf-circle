@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    restart: always
+    ports:
+      - 5001:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - frontend-volume:/app:ro
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - frontend-volume:/app
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: always
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: 'werewolfCircleUser'
+      POSTGRES_PASSWORD: 'dontworrythispasswordwillchangeinproduction'
+      POSTGRES_DB: 'WerewolfCircle'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db-scripts/create.sql:/docker-entrypoint-initdb.d/init.sql
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - 80
+    environment:
+      ASPNETCORE_ENVIRONMENT: 'Production'
+      ConnectionStrings__Default: 'Server=postgres;Port=5432;Database=WerewolfCircle;User Id=werewolfCircleUser;Password=dontworrythispasswordwillchangeinproduction'
+      Jwt__SecretKey: 'VerySecretKeyWhichIGuessNeedsToBeLongerOtherwiseItDoesntWork?'
+      Jwt__Issuer: 'http://localhost'
+      Jwt__Audience: 'http://localhost'
+    depends_on:
+      - postgres
+volumes:
+  frontend-volume:
+  pgdata:
