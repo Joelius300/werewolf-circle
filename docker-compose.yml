@@ -40,6 +40,7 @@ services:
     expose:
       - 80
     environment:
+      Urls: 'http://+:80'
       ASPNETCORE_ENVIRONMENT: 'Production'
       ConnectionStrings__Default: 'Server=postgres;Port=5432;Database=WerewolfCircle;User Id=werewolfCircleUser;Password=dontworrythispasswordwillchangeinproduction'
       Jwt__SecretKey: 'VerySecretKeyWhichIGuessNeedsToBeLongerOtherwiseItDoesntWork?'
