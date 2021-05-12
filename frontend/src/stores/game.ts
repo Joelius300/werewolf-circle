@@ -15,20 +15,20 @@ const useGameStore = defineStore({
     initialRoomId: '',
   }),
   getters: {
-    token() {
+    token(): string | null {
       return token.value;
     },
-    decodedToken() {
+    decodedToken(): JwtToken | null {
       console.log(`decoding token: ${this.token}`);
       return this.token ? jwtDecode<JwtToken>(this.token) : null;
     },
-    playerName() {
+    playerName(): string | undefined {
       return this.decodedToken?.given_name;
     },
-    isAdmin() {
+    isAdmin(): boolean | undefined {
       return this.decodedToken?.role === 'Admin';
     },
-    roomId() {
+    roomId(): string | undefined {
       return this.decodedToken?.roomId;
     },
   },
