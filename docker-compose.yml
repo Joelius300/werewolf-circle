@@ -16,6 +16,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VUE_APP_API_BASE_URL: http://localhost:5001/api/
+        VUE_APP_GAME_HUB_URL: http://localhost:5001/gameHub
     volumes:
       - frontend-volume:/app
   postgres:
