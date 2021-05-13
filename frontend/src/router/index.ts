@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import useGameStore from '@/stores/game';
 import piniaInstance from '@/stores/piniaProvider';
 import isValidPlayerName from '@/services/validators/playerNameValidator';
+import { initializeTokenStore } from '@/stores/tokenStore';
 import PlayerView from '../views/PlayerView.vue';
 import LobbyView from '../views/LobbyView.vue';
 import AdminView from '../views/AdminView.vue';
@@ -47,15 +48,30 @@ const router = createRouter({
   routes,
 });
 
-/* router.beforeEach((to, _from, next) => {
+router.beforeEach((_to, _from, next) => {
   const store = useGameStore(piniaInstance);
+  if (!store.token) {
+    if (!initializeTokenStore()) {
+      next('/');
+      return;
+    }
+  }
 
-  if (store.isInGame && store.roomId && to.name !== 'PlayerView') {
-    next(`/${store.roomId}`);
+  if (!store.game) {
+    // TODO
+    // store.rejoinGame();
+    console.log('rejoining game');
+    store.game = { roomId: '', players: [] };
+  } else {
+    next();
     return;
   }
 
-  next();
-}); */
+  if (store.isAdmin) {
+    next(`/${store.roomId}/admin`);
+  } else {
+    next(`/${store.roomId}`);
+  }
+});
 
 export default router;

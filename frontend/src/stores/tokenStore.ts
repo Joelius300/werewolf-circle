@@ -13,11 +13,15 @@ function setToken(token: string | null) {
   }
 }
 
-function initializeTokenStore() {
+function initializeTokenStore(): boolean {
   const token = localStorage.getItem('token');
   if (token) {
     setToken(token);
+
+    return true;
   }
+
+  return false;
 }
 
 export { readonlyToken as token, setToken, initializeTokenStore };
