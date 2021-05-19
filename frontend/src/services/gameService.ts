@@ -30,7 +30,6 @@ function subscribeToGameEvents(hubConnection: HubConnection, game: Game) {
   return () => {
     unsubPlayerJoined();
     unsubPlayerLeft();
-    console.log('unsubbing from hub events');
   }
 }
 
@@ -89,7 +88,6 @@ export async function joinGame(store: MinimalGameStoreWithInternalState, roomId:
 export async function leaveGame(store: MinimalGameStore): Promise<void> {
   await axios.post('/game/leave');
 
-  console.log('setting game to null, this should trigger the unsub function which removes the watchers');
   store.game = null;
   setToken(null);
 }

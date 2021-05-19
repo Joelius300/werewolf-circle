@@ -19,7 +19,6 @@ const useGameStore = defineStore({
       return token.value;
     },
     decodedToken(): JwtToken | null {
-      console.log(`decoding token: ${this.token}`);
       return this.token ? jwtDecode<JwtToken>(this.token) : null;
     },
     playerName(): string | undefined {
