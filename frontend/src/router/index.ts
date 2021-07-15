@@ -50,23 +50,25 @@ const router = createRouter({
 
 router.beforeEach((_to, _from, next) => {
   const store = useGameStore(piniaInstance);
-  if (!store.token) {
-    if (!initializeTokenStore()) {
-      next('/');
-      return;
-    }
+  if (!store.token && !initializeTokenStore()) {
+    // no token anywhere, not in game
+    next('/');
+    return;
   }
 
-  if (!store.game) {
-    // TODO
-    // store.rejoinGame();
-    console.log('rejoining game');
-    store.game = { roomId: '', players: [] };
-  } else {
+  if (store.game) {
+    // has token and game object, everything seems alright
     next();
     return;
   }
 
+  // has token but no game object, requires rejoin
+  // TODO implement instead of manual assignment
+  // store.rejoinGame();
+  console.log('rejoining game');
+  store.game = { roomId: '', players: [] };
+
+  // now we're all set again, go to the appropriate game view
   if (store.isAdmin) {
     next(`/${store.roomId}/admin`);
   } else {
