@@ -9,6 +9,5 @@ ARG VUE_APP_GAME_HUB_URL
 
 RUN npm run build
 
-FROM alpine:latest as production-stage
-COPY --from=build-stage /app/dist /app
-VOLUME [ "/app" ]
+FROM nginx:latest as production-stage
+COPY --from=build-stage /app/dist /usr/share/nginx/html
