@@ -1,6 +1,6 @@
 ﻿// MIT License
 // 
-// Copyright (c) 2021 Joel Liechti
+// Copyright (c) 2021 Joel L.
 // Copyright (c) 2017 zhu yu
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
